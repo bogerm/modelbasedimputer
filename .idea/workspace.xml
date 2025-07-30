@@ -4,8 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b6c2ff40-f046-49ab-80bb-28d36f9a1745" name="Changes" comment="Initial commit">
+    <list default="true" id="b6c2ff40-f046-49ab-80bb-28d36f9a1745" name="Changes" comment="Fix unit tests">
+      <change afterPath="$PROJECT_DIR$/tests/test_categorical_only.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modelbasedimputer/model_based_imputer.py" beforeDir="false" afterPath="$PROJECT_DIR$/modelbasedimputer/model_based_imputer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_functional_imputer.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_functional_imputer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_model_based_imputer.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_model_based_imputer.py" afterDir="false" />
     </list>
@@ -177,7 +179,15 @@
       <option name="project" value="LOCAL" />
       <updated>1753832429163</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Fix unit tests">
+      <option name="closed" value="true" />
+      <created>1753864008702</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1753864008702</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -193,6 +203,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="Initial commit" />
+    <MESSAGE value="Fix unit tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix unit tests" />
   </component>
 </project>

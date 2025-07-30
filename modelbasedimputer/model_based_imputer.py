@@ -110,6 +110,10 @@ class ModelBasedImputer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         check_is_fitted(self, ["models_", "all_features_"])
+        missing_cols = [c for c in self.all_features_ if c not in X.columns]
+        if missing_cols:
+            raise ValueError(f"Input is missing expected columns: {missing_cols}")
+
         X = pd.DataFrame(X).copy()
 
         if self.verbose:
@@ -122,22 +126,21 @@ class ModelBasedImputer(BaseEstimator, TransformerMixin):
             le = self.label_encoders_.get(col, None)
 
             missing_mask = X[col].isna()
-            valid_mask = missing_mask
 
-            if valid_mask.sum() == 0:
+            if missing_mask.sum() == 0:
                 continue
 
             feature_cols = [c for c in X.columns if c != col]
-            X_pred = X.loc[valid_mask, feature_cols]
+            X_pred = X.loc[missing_mask, feature_cols]
 
             try:
                 X_encoded = encoder.transform(X_pred)
                 y_pred = model.predict(X_encoded)
                 if is_cat:
                     y_pred = le.inverse_transform(np.round(y_pred).astype(int))
-                X.loc[valid_mask, col] = y_pred
+                X.loc[missing_mask, col] = y_pred
                 if self.verbose:
-                    print(f"Imputed {valid_mask.sum()} missing values in '{col}'")
+                    print(f"Imputed {missing_mask.sum()} missing values in '{col}'")
             except Exception as e:
                 if self.verbose:
                     print(f"Skipping column '{col}' due to error: {e}")

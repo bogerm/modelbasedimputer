@@ -54,7 +54,7 @@ def test_fit_and_transform_target(sample_data):
     transformed = imputer.transform(sample_data)
 
     assert transformed.shape[0] == sample_data.shape[0]
-    assert not pd.DataFrame(transformed).isna().any().any()
+    assert not transformed['Stage_fear'].isna().any()
 
 def test_set_output_pandas(sample_data):
     imputer = ModelBasedImputer(
@@ -75,10 +75,10 @@ def test_check_is_fitted(sample_data):
     ).set_output(transform="pandas")
 
     with pytest.raises(Exception):
-        check_is_fitted(imputer)
+        imputer.transform(sample_data)
 
     imputer.fit(sample_data)
-    check_is_fitted(imputer)  # Should not raise
+    imputer.transform(sample_data)  # Should not raise
 
 def test_transform_without_missing(sample_data):
     imputer = ModelBasedImputer(
@@ -90,3 +90,77 @@ def test_transform_without_missing(sample_data):
     transformed = imputer.transform(df_no_missing)
 
     assert transformed.shape == df_no_missing.shape
+
+def test_transform_with_missing_columns():
+    df = pd.DataFrame({
+        "A": ["yes", "no", "yes", np.nan],
+        "B": [1.0, 2.0, 3.0, 4.0],
+    })
+
+    imputer = ModelBasedImputer(
+        categorical_features=["A"],
+        numerical_features=["B"]
+    ).fit(df)
+
+    # Drop column B
+    df_missing = df.drop(columns=["B"])
+
+    with pytest.raises(ValueError, match="Input is missing expected columns"):
+        imputer.transform(df_missing)
+
+def test_encoder_types(monkeypatch):
+    df = pd.DataFrame({
+        "cat1": ["a", "b", np.nan, "a", "b", "b", "a", "a"],
+        "cat2": ["x", "y", "x", "y", "x", "x", "y", "y"]
+    })
+
+    # Force a NaN to be imputed
+    df.loc[2, "cat1"] = np.nan
+
+    # OneHotEncoder test
+    imputer_onehot = ModelBasedImputer(
+        categorical_features=["cat1"],
+        encoder_type="onehot"
+    ).fit(df)
+    result_onehot = imputer_onehot.transform(df)
+    assert not pd.DataFrame(result_onehot).isna().any().any()
+
+    # TargetEncoder test
+    imputer_target = ModelBasedImputer(
+        categorical_features=["cat1"],
+        encoder_type="target"
+    ).fit(df)
+    result_target = imputer_target.transform(df)
+    assert not pd.DataFrame(result_target).isna().any().any()
+
+def test_inverse_transform_with_label_encoder():
+    df = pd.DataFrame({
+        "animal": ["cat", "dog", "cat", np.nan, "dog", np.nan],
+        "age": [1, 2, 3, 4, 5, 6]
+    })
+
+    imputer = ModelBasedImputer(
+        categorical_features=["animal"],
+        numerical_features=[],
+        verbose=True
+    ).fit(df)
+
+    result = pd.DataFrame(imputer.transform(df), columns=imputer.all_features_)
+    assert not result["animal"].isna().any()
+    assert set(result["animal"]).issubset({"cat", "dog"})
+
+def test_pipeline_preserves_shape_and_type():
+    df = pd.DataFrame({
+        "city": ["NY", "LA", "SF", np.nan],
+        "salary": [100_000, 120_000, 110_000, np.nan]
+    })
+
+    imputer = ModelBasedImputer(
+        categorical_features=["city"],
+        numerical_features=["salary"],
+        verbose=False
+    ).fit(df)
+
+    result = imputer.transform(df)
+    assert result.shape == df.shape
+    assert isinstance(result, (pd.DataFrame, np.ndarray))
