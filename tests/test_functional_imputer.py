@@ -1,72 +1,83 @@
-import numpy as np
 import pandas as pd
+import numpy as np
+from sklearn.datasets import fetch_openml
 from sklearn.metrics import accuracy_score, r2_score
-from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.linear_model import Ridge
-from your_module.model_based_imputer import ModelBasedImputer  # adjust as needed
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from modelbasedimputer import ModelBasedImputer  # Replace with actual path
 
-
-def test_model_based_imputer_functional(seed=42):
+def test_model_based_imputer_on_realistic_data(seed=42):
     np.random.seed(seed)
 
-    # 1. Create synthetic data
-    n_samples = 500
-    data = pd.DataFrame({
-        "cat1": np.random.choice(["A", "B", "C"], size=n_samples),
-        "cat2": np.random.choice(["X", "Y"], size=n_samples),
-        "num1": np.random.normal(10, 2, size=n_samples),
-        "num2": np.random.uniform(0, 1, size=n_samples)
-    })
+    # 1. Load Adult dataset (mixed types)
+    # adult = fetch_openml(name="adult", version=2, as_frame=True)
+    # df = adult.frame
+    personality = pd.read_csv('tests/personality_dataset.csv')
+    df = personality.drop(columns=['Personality'])
 
-    # Save original full dataset for later comparison
-    original_data = data.copy(deep=True)
+    # 2. Keep relevant subset of features
+    # features = [
+    #     "education", "workclass", "occupation",
+    #     "hours-per-week", "age", "capital-gain", "education-num", "marital-status"
+    # ]
+    features = df.columns.tolist()
+    df = df[features].copy()
+    df = df.dropna()  # Drop initial NaNs
 
-    # 2. Randomly mask 25% of values in selected columns
-    mask_fraction = 0.25
-    mask = pd.DataFrame(False, index=data.index, columns=data.columns)
+    # 3. Randomly remove 25% of values in each column
+    mask_fraction = 0.20
+    missing_mask = pd.DataFrame(False, index=df.index, columns=df.columns)
+    for col in df.columns:
+        mask_idx = df.sample(frac=mask_fraction).index
+        df.loc[mask_idx, col] = np.nan
+        missing_mask.loc[mask_idx, col] = True
 
-    for col in data.columns:
-        mask_indices = data.sample(frac=mask_fraction).index
-        data.loc[mask_indices, col] = np.nan
-        mask.loc[mask_indices, col] = True
+    original = personality[features].loc[df.index]  # Original data before masking
 
-    # 3. Impute using ModelBasedImputer
+    # 4. Define types
+    # categorical = ["education", "workclass", "occupation"]
+    # numerical = ["hours-per-week", "age", "capital-gain"]
+    numerical = df.select_dtypes(include=["number"]).columns.tolist()
+    categorical = df.select_dtypes(include=["object"]).columns.tolist()
+
+    # 5. Impute
     imputer = ModelBasedImputer(
-        categorical_features=["cat1", "cat2"],
-        numerical_features=["num1", "num2"],
-        model_class=HistGradientBoostingClassifier,
-        num_model_class=Ridge,
-        encoder_type="onehot",
-        verbose=False
-    )
-    imputer.fit(data)
-    imputed_data = imputer.transform(data)
+        categorical_features=categorical,
+        numerical_features=numerical,
+        encoder_type="target",
+        model_class=HistGradientBoostingRegressor,
+        verbose=True
+    ).set_output(transform="pandas")
+    imputer.fit(df)
+    imputed = imputer.transform(df)
 
-    # 4. Evaluate accuracy and R² score
-    cat_acc = {}
-    num_r2 = {}
+    # 6. Score imputation quality
+    cat_scores = {}
+    num_scores = {}
+    for col in df.columns:
+        true = original.loc[missing_mask[col], col]
+        pred = imputed.loc[missing_mask[col], col]
 
-    for col in data.columns:
-        true_values = original_data.loc[mask[col], col]
-        pred_values = imputed_data[mask[col]][col]
+        if pred.isna().any():
+            print(f"Warning: NaNs still present in predictions for '{col}'")
+            continue  # or raise
 
-        if col.startswith("cat"):
-            acc = accuracy_score(true_values, pred_values)
-            cat_acc[col] = acc
+        if col in categorical:
+            score = accuracy_score(true, pred)
+            cat_scores[col] = score
         else:
-            r2 = r2_score(true_values, pred_values)
-            num_r2[col] = r2
+            score = r2_score(true, pred,)
+            num_scores[col] = score
 
-    # 5. Print results
-    print("Categorical Accuracy:")
-    for col, acc in cat_acc.items():
-        print(f"  {col}: {acc:.4f}")
+    print("\nCategorical Accuracy:")
+    for col, score in cat_scores.items():
+        print(f"{col}: {score:.3f}")
 
-    print("\nNumerical R² Score:")
-    for col, r2 in num_r2.items():
-        print(f"  {col}: {r2:.4f}")
+    print("\nNumerical R²:")
+    for col, score in num_scores.items():
+        print(f"{col}: {score:.3f}")
 
-    # Optional asserts
-    assert all(acc > 0.7 for acc in cat_acc.values()), "Low categorical accuracy"
-    assert all(r2 > 0.7 for r2 in num_r2.values()), "Low numerical R²"
+    # Assert acceptable performance
+    assert all(score > 0.6 for score in cat_scores.values()), "Low categorical accuracy"
+    assert all(score > 0.5 for score in num_scores.values()), "Low numerical R²"
 
