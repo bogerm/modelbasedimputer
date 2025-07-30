@@ -18,3 +18,12 @@ requires-python = ">=3.8"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "scikit-learn",
+  "pandas",
+  "numpy",
+  "category_encoders"
+]
