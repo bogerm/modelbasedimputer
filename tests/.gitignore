@@ -1,0 +1,67 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+env/
+venv/
+ENV/
+VENV/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+poetry.lock
+
+# PyCharm IDE
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.cache/
+.pytest_cache/
+
+# MyPy, coverage, and profiling
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+.prof
+
+# logs
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# VSCode (if used alongside)
+.vscode/

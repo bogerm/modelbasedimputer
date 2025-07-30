@@ -4,6 +4,7 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_is_fitted
 from category_encoders import TargetEncoder
 from sklearn.ensemble import HistGradientBoostingClassifier
+import warnings
 import pandas as pd
 import numpy as np
 
@@ -18,6 +19,7 @@ class ModelBasedImputer(BaseEstimator, TransformerMixin):
         model_params=None,
         num_model_params=None,
         encoder_type='onehot',  # 'onehot' or 'target'
+        fallback=False,
         verbose=False
     ):
         self.categorical_features = categorical_features or []
@@ -27,6 +29,7 @@ class ModelBasedImputer(BaseEstimator, TransformerMixin):
         self.model_params = model_params or {}
         self.num_model_params = num_model_params or {}
         self.encoder_type = encoder_type
+        self.fallback = fallback
         self.verbose = verbose
 
         self.models_ = {}
@@ -60,6 +63,16 @@ class ModelBasedImputer(BaseEstimator, TransformerMixin):
             y_train = le.fit_transform(X_train[col])
             self.label_encoders_[col] = le
 
+            if X_train.empty or X_train[col].nunique() < 2:
+                if self.fallback:
+                    mode_value = X[col].mode().iloc[0]
+                    self.models_[col] = lambda X: np.full(len(X), mode_value)
+                    if self.verbose:
+                        print(f"Falling back to mode for '{col}'")
+                else:
+                    warnings.warn(f"Skipping '{col}' — not enough variation to train model")
+                continue
+
             feature_cols = [c for c in X.columns if c != col]
             X_train_features = X_train[feature_cols]
 
@@ -92,6 +105,16 @@ class ModelBasedImputer(BaseEstimator, TransformerMixin):
             y_train = X_train[col]
             feature_cols = [c for c in X.columns if c != col]
             X_train_features = X_train[feature_cols]
+
+            if X_train.empty or y_train.nunique() < 2:
+                if self.fallback:
+                    mean_value = X[col].mean()
+                    self.models_[col] = lambda X: np.full(len(X), mean_value)
+                    if self.verbose:
+                        print(f"Falling back to mean for '{col}'")
+                else:
+                    warnings.warn(f"Skipping '{col}' — not enough data to train model")
+                continue
 
             # Always use OneHotEncoder for numerical
             encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
